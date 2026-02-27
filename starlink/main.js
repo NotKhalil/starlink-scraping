@@ -1,5 +1,7 @@
 import puppeteer from "puppeteer";
 
+const URL = "https://starlink.com";
+
 async function getDebuggerUrl() {
     try {
         const response = await fetch('http://127.0.0.1:9222/json/version');
@@ -14,14 +16,45 @@ async function getDebuggerUrl() {
     }
 }
 
-async function openUrl(pageUrl){
-    const page = await browser.newPage();
-    await page.goto(pageUrl);
+async function getServiceLinesUrls(page) {
+    const hrefs = new Set();
+    
+    await page.waitForSelector('div[role="rowgroup"] div[role="row"]');
+
+    const rowGroup = await page.$('div[role="rowgroup"]');
+    const rows = await rowGroup.$$('div[role="row"]');
+
+    for(const row of rows){
+        const href = await row.$eval('a[role="link"]', el => el.getAttribute('href'));
+        hrefs.add(href);
+    }
+
+    return hrefs;
 }
 
-const url = await getDebuggerUrl();
+async function scrapeLinesData(hrefs, page){
+    for(const href of hrefs){
+        await page.goto(URL + href);
+        //add data scraping here
+    }
+}
 
-const browser = await puppeteer.connect({browserWSEndpoint: url, defaultViewport: null})
-await openUrl('https://starlink.com/');
+function waitFor (ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
 
-browser.disconnect();
+async function run(){
+    const url = await getDebuggerUrl();
+
+    const browser = await puppeteer.connect({browserWSEndpoint: url, defaultViewport: null})
+    
+    const page = await browser.newPage();
+    await page.goto(URL + '/account/dashboard');
+    
+    const hrefs = await getServiceLinesUrls(page);
+    await scrapeLinesData(hrefs, page);
+
+    browser.disconnect();
+}
+
+run();
