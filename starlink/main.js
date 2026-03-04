@@ -35,8 +35,19 @@ async function getServiceLinesUrls(page) {
 async function scrapeLinesData(hrefs, page){
     for(const href of hrefs){
         await page.goto(URL + href);
-        //add data scraping here
+        const nickname = await getNickname(page);
+        console.log(nickname);
     }
+}
+
+async function getNickname(page){
+    await page.waitForSelector('[data-sentry-component="SXTypography"]');
+
+    const nickname = await page.evaluate(() => {
+        const stack = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.querySelector('p')?.innerText === 'Nickname');
+        return stack.querySelectorAll('p')[1].innerText;
+    });
+    return nickname;
 }
 
 function waitFor (ms) {
