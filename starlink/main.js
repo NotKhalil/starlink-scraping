@@ -41,12 +41,13 @@ async function scrapeLinesData(hrefs, page){
 }
 
 async function getNickname(page){
-    await page.waitForSelector('[data-sentry-component="SXTypography"]');
+    await page.waitForSelector('::-p-text(Nickname)');
 
     const nickname = await page.evaluate(() => {
-        const stack = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.querySelector('p')?.innerText === 'Nickname');
-        return stack.querySelectorAll('p')[1].innerText;
+        const stack = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.textContent.trim() === "Nickname");
+        return stack?.nextElementSibling?.textContent?.trim() ?? null;
     });
+
     return nickname;
 }
 
