@@ -1,6 +1,7 @@
 import puppeteer from "puppeteer";
 
 const URL = "https://starlink.com";
+const cardFields = ["Starlink ID", "Software Version", "Serial Number", "Kit Number", "Uptime", "Last Updated"];
 
 async function getDebuggerUrl() {
     try {
@@ -40,6 +41,12 @@ async function scrapeLinesData(hrefs, page){
         const [monthlyUsage, totalUsage] = await getMonthlyUsage(page);
         console.log(monthlyUsage);
         console.log(totalUsage);
+        const cardData = {};
+        for(const name of cardFields){
+            const data = await getDataFromCard(page, name);
+            cardData[name] = data;
+        }
+        console.log(cardData);
     }
 }
 
@@ -69,6 +76,19 @@ async function getMonthlyUsage(page){
     });
 
     return [used, total];
+}
+
+async function getDataFromCard(page, field){
+    await page.waitForSelector(`::-p-text(${field})`);
+
+    const value = await page.evaluate((field) => {
+        console.log(field);
+        const obj = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.textContent.trim() === field);
+        const data = obj.parentElement?.nextElementSibling?.textContent ?? null;
+        return data;
+    }, field);
+
+    return value;
 }
 
 function waitFor (ms) {
