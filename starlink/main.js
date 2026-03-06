@@ -37,6 +37,8 @@ async function scrapeLinesData(hrefs, page){
         await page.goto(URL + href);
         const nickname = await getNickname(page);
         console.log(nickname);
+        const monthDataUsage = await getMonthlyUsage(page);
+        console.log(monthDataUsage);
     }
 }
 
@@ -49,6 +51,18 @@ async function getNickname(page){
     });
 
     return nickname;
+}
+
+async function getMonthlyUsage(page){
+    await page.waitForSelector('::-p-text(Monthly Data Usage)');
+
+    const usage = await page.evaluate(() => {
+        const div = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.textContent.trim() === "Monthly Data Usage");
+        const data = div.parentElement?.nextElementSibling?.textContent ?? null;
+        return data;
+    });
+
+    return usage;
 }
 
 function waitFor (ms) {
