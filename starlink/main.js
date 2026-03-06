@@ -2,6 +2,7 @@ import puppeteer from "puppeteer";
 
 const URL = "https://starlink.com";
 const cardFields = ["Starlink ID", "Software Version", "Serial Number", "Kit Number", "Uptime", "Last Updated"];
+const cardFieldsSplit = ["Downlink Throughput", "Uplink Throughput", "Latency", "Ping Drop Rate", "Signal Quality", "Obstruction"];
 
 async function getDebuggerUrl() {
     try {
@@ -35,7 +36,7 @@ async function getServiceLinesUrls(page) {
 
 async function scrapeLinesData(hrefs, page){
     for(const href of hrefs){
-        await page.goto(URL + href);
+        await page.goto(URL + href, { waitUntil: 'domcontentloaded' });
         const nickname = await getNickname(page);
         console.log(nickname);
         const [monthlyUsage, totalUsage] = await getMonthlyUsage(page);
@@ -46,7 +47,12 @@ async function scrapeLinesData(hrefs, page){
             const data = await getDataFromCard(page, name);
             cardData[name] = data;
         }
+        for (const name of cardFieldsSplit){
+            const data = await getDataFromCardSplit(page, name);
+            cardData[name] = data;
+        }
         console.log(cardData);
+        console.log("\n------------------------------------------------------------------\n");
     }
 }
 
@@ -80,15 +86,38 @@ async function getMonthlyUsage(page){
 
 async function getDataFromCard(page, field){
     await page.waitForSelector(`::-p-text(${field})`);
-
+    //yes, this is a very unclever and naive solution but I'll look for a better solution later.
+    await waitFor(200);
     const value = await page.evaluate((field) => {
-        console.log(field);
         const obj = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.textContent.trim() === field);
         const data = obj.parentElement?.nextElementSibling?.textContent ?? null;
         return data;
     }, field);
 
     return value;
+}
+
+async function getDataFromCardSplit(page, field){
+    await page.waitForSelector(`::-p-text(${field})`);
+    const value = await page.evaluate((field) => {
+        const obj = [...document.querySelectorAll('[data-sentry-component="SXTypography"]')].find(el => el.textContent.trim() === field);
+        const data = obj.parentElement?.nextElementSibling?.textContent ?? null;
+        return data;
+    }, field);
+    
+    const finalValues = {};
+    const rawValues = value.split("·");
+    
+    for(const value of rawValues){
+        const splitValue = value.trim().split(" ");
+        if(splitValue[2]){
+            finalValues[splitValue[0]] = splitValue[1] + splitValue[2];
+        }else{
+            finalValues[splitValue[0]] = splitValue[1];
+        }
+    } 
+
+    return finalValues;
 }
 
 function waitFor (ms) {
