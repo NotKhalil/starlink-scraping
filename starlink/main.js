@@ -37,8 +37,9 @@ async function scrapeLinesData(hrefs, page){
         await page.goto(URL + href);
         const nickname = await getNickname(page);
         console.log(nickname);
-        const monthDataUsage = await getMonthlyUsage(page);
-        console.log(monthDataUsage);
+        const [monthlyUsage, totalUsage] = await getMonthlyUsage(page);
+        console.log(monthlyUsage);
+        console.log(totalUsage);
     }
 }
 
@@ -62,7 +63,12 @@ async function getMonthlyUsage(page){
         return data;
     });
 
-    return usage;
+    const [used, total] = usage.split("/").map(s =>{
+        const [value, unit] = s.split(" ");
+        return {"value": parseFloat(value), "unit": unit};
+    });
+
+    return [used, total];
 }
 
 function waitFor (ms) {
